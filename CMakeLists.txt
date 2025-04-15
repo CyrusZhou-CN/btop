@@ -40,7 +40,6 @@ option(BTOP_LTO "Enable LTO" ON)
 option(BTOP_USE_MOLD "Use mold to link btop" OFF)
 option(BTOP_PEDANTIC "Enable a bunch of additional warnings" OFF)
 option(BTOP_WERROR "Compile with warnings as errors" OFF)
-option(BTOP_FORTIFY "Detect buffer overflows with _FORTIFY_SOURCE=3" ON)
 option(BTOP_GPU "Enable GPU support" ON)
 cmake_dependent_option(BTOP_RSMI_STATIC "Link statically to ROCm SMI" OFF "BTOP_GPU" OFF)
 
@@ -94,7 +93,7 @@ execute_process(
   OUTPUT_VARIABLE GIT_COMMIT
   OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
 set(CONFIGURE_COMMAND
-    "cmake -DBTOP_STATIC=${BTOP_STATIC} -DBTOP_USE_MOLD=${BTOP_USE_MOLD} -DBTOP_FORTIFY=${BTOP_FORTIFY} -DBTOP_GPU=${BTOP_GPU}"
+    "cmake -DBTOP_STATIC=${BTOP_STATIC} -DBTOP_USE_MOLD=${BTOP_USE_MOLD} -DBTOP_GPU=${BTOP_GPU}"
 )
 get_filename_component(CXX_COMPILER_BASENAME "${CMAKE_CXX_COMPILER}" NAME)
 set(COMPILER "${CXX_COMPILER_BASENAME}")
@@ -139,8 +138,6 @@ target_compile_definitions(btop PRIVATE
   FMT_HEADER_ONLY
   _FILE_OFFSET_BITS=64
   $<$<CONFIG:Debug>:_GLIBCXX_ASSERTIONS _LIBCPP_ENABLE_ASSERTIONS=1>
-  # Only has an effect with optimizations enabled
-  $<$<AND:$<NOT:$<CONFIG:Debug>>,$<BOOL:${BTOP_FORTIFY}>>:_FORTIFY_SOURCE=3>
 )
 
 target_include_directories(btop SYSTEM PRIVATE include)
@@ -242,12 +239,15 @@ find_program(LOWDOWN_EXECUTABLE lowdown)
 
 if(LOWDOWN_EXECUTABLE)
   # Custom target to compile Markdown to man page using lowdown
-  add_custom_target(btop.1 ALL
-      COMMAND lowdown -s -Tman -o btop.1 manpage.md
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  add_custom_command(
+    OUTPUT btop.1
+    COMMAND lowdown -s -T man -o btop.1 ${CMAKE_CURRENT_SOURCE_DIR}/manpage.md
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/manpage.md
+    VERBATIM
   )
+  add_custom_target(generate_manpage ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/btop.1)
   # Install the man page
-  install(FILES btop.1 DESTINATION "share/man/man1")
+  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/btop.1" DESTINATION "share/man/man1")
 else()
   message(WARNING "Command 'lowdown' not found: skipping generating man page btop.1")
 endif()
