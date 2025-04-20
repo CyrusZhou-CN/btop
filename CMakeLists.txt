@@ -36,12 +36,18 @@ set(CMAKE_COLOR_DIAGNOSTICS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(BTOP_STATIC "Link btop statically" OFF)
-option(BTOP_LTO "Enable LTO" ON)
 option(BTOP_USE_MOLD "Use mold to link btop" OFF)
 option(BTOP_PEDANTIC "Enable a bunch of additional warnings" OFF)
 option(BTOP_WERROR "Compile with warnings as errors" OFF)
 option(BTOP_GPU "Enable GPU support" ON)
 cmake_dependent_option(BTOP_RSMI_STATIC "Link statically to ROCm SMI" OFF "BTOP_GPU" OFF)
+
+# Enable LTO in release builds by default
+if(CMAKE_BUILD_TYPE MATCHES "Rel(ease|WithDebInfo)")
+  option(BTOP_LTO "Enable LTO" ON)
+else()
+  option(BTOP_LTO "Enable LTO" OFF)
+endif()
 
 if(BTOP_STATIC AND NOT APPLE)
   # Set this before calling find_package
@@ -102,9 +108,11 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINAR
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 # Check for and enable LTO
-check_ipo_supported(RESULT ipo_supported)
-if(ipo_supported AND BTOP_LTO)
-  set_target_properties(btop PROPERTIES INTERPROCEDURAL_OPTIMIZATION ON)
+if(BTOP_LTO)
+  check_ipo_supported(RESULT ipo_supported)
+  if(ipo_supported)
+    set_target_properties(btop PROPERTIES INTERPROCEDURAL_OPTIMIZATION ON)
+  endif()
 endif()
 
 target_compile_options(btop PRIVATE -Wall -Wextra -Wpedantic -ftree-vectorize)
@@ -226,7 +234,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
   target_link_libraries(btop kvm::kvm)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "NetBSD")
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_compile_options(btop PRIVATE -static-libstdc++ -std=c++20 -DNDEBUG)
+    target_compile_options(btop PRIVATE -static-libstdc++)
   endif()
   find_package(kvm REQUIRED)
   find_package(proplib REQUIRED)
@@ -249,7 +257,7 @@ if(LOWDOWN_EXECUTABLE)
   # Install the man page
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/btop.1" DESTINATION "share/man/man1")
 else()
-  message(WARNING "Command 'lowdown' not found: skipping generating man page btop.1")
+  message(STATUS "Command 'lowdown' not found: skipping generating man page btop.1")
 endif()
 
 install(TARGETS btop RUNTIME)
