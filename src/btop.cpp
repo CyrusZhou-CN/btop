@@ -184,7 +184,8 @@ void term_resize(bool force) {
 				}
 			}
 			min_size = Term::get_min_size(boxes);
-			minWidth = min_size.at(0), minHeight = min_size.at(1);
+			minWidth = min_size.at(0);
+			minHeight = min_size.at(1);
 		}
 		else if (not Term::refresh()) break;
 	}
@@ -204,8 +205,7 @@ void clean_quit(int sig) {
 			pthread_cancel(Runner::runner_id);
 		}
 	#else
-		struct timespec ts;
-		ts.tv_sec = 5;
+		constexpr struct timespec ts { .tv_sec = 5, .tv_nsec = 0 };
 		if (pthread_timedjoin_np(Runner::runner_id, nullptr, &ts) != 0) {
 			Logger::warning("Failed to join _runner thread on exit!");
 			pthread_cancel(Runner::runner_id);
@@ -242,23 +242,23 @@ void clean_quit(int sig) {
 }
 
 //* Handler for SIGTSTP; stops threads, restores terminal and sends SIGSTOP
-void _sleep() {
+static void _sleep() {
 	Runner::stop();
 	Term::restore();
 	std::raise(SIGSTOP);
 }
 
 //* Handler for SIGCONT; re-initialize terminal and force a resize event
-void _resume() {
+static void _resume() {
 	Term::init();
 	term_resize(true);
 }
 
-void _exit_handler() {
+static void _exit_handler() {
 	clean_quit(-1);
 }
 
-void _signal_handler(const int sig) {
+static void _signal_handler(const int sig) {
 	switch (sig) {
 		case SIGINT:
 			if (Runner::active) {
@@ -340,14 +340,18 @@ namespace Runner {
 		pthread_mutex_t& pt_mutex;
 	public:
 		int status;
-		thread_lock(pthread_mutex_t& mtx) : pt_mutex(mtx) {
+		explicit thread_lock(pthread_mutex_t& mtx) : pt_mutex(mtx) {
 			pthread_mutex_init(&pt_mutex, nullptr);
 			status = pthread_mutex_lock(&pt_mutex);
 		}
-		~thread_lock() {
+		~thread_lock() noexcept {
 			if (status == 0)
 				pthread_mutex_unlock(&pt_mutex);
 		}
+		thread_lock(const thread_lock& other) = delete;
+		thread_lock& operator=(const thread_lock& other) = delete;
+		thread_lock(thread_lock&& other) = delete;
+		thread_lock& operator=(thread_lock&& other) = delete;
 	};
 
 	//* Wrapper for raising privileges when using SUID bit
@@ -358,10 +362,14 @@ namespace Runner {
 			if (Global::real_uid != Global::set_uid)
 				this->status = seteuid(Global::set_uid);
 		}
-		~gain_priv() {
+		~gain_priv() noexcept {
 			if (status == 0)
 				status = seteuid(Global::real_uid);
 		}
+		gain_priv(const gain_priv& other) = delete;
+		gain_priv& operator=(const gain_priv& other) = delete;
+		gain_priv(gain_priv&& other) = delete;
+		gain_priv& operator=(gain_priv&& other) = delete;
 	};
 
 	string output;
@@ -390,8 +398,8 @@ namespace Runner {
 	class MyNumPunct : public std::numpunct<char>
 	{
 	protected:
-		virtual char do_thousands_sep() const { return '\''; }
-		virtual std::string do_grouping() const { return "\03"; }
+		virtual char do_thousands_sep() const override { return '\''; }
+		virtual std::string do_grouping() const override { return "\03"; }
 	};
 
 
@@ -406,7 +414,7 @@ namespace Runner {
 
 	struct runner_conf current_conf;
 
-	void debug_timer(const char* name, const int action) {
+	static void debug_timer(const char* name, const int action) {
 		switch (action) {
 			case collect_begin:
 				debug_times[name].at(collect) = time_micros();
@@ -431,7 +439,7 @@ namespace Runner {
 	}
 
 	//? ------------------------------- Secondary thread: async launcher and drawing ----------------------------------
-	void * _runner(void *) {
+	static void * _runner(void *) {
 		//? Block some signals in this thread to avoid deadlock from any signal handlers trying to stop this thread
 		sigemptyset(&mask);
 		// sigaddset(&mask, SIGINT);

@@ -889,7 +889,7 @@ namespace Menu {
 		Switch
 	};
 
-	int signalChoose(const string& key) {
+	static int signalChoose(const string& key) {
 		auto s_pid = (Config::getB("show_detailed") and Config::getI("selected_pid") == 0 ? Config::getI("detailed_pid") : Config::getI("selected_pid"));
 		static int x{};
 		static int y{};
@@ -997,7 +997,7 @@ namespace Menu {
 		return (redraw ? Changed : retval);
 	}
 
-	int sizeError(const string& key) {
+	static int sizeError(const string& key) {
 		if (redraw) {
 			vector<string> cont_vec {
 				Fx::b + Theme::g("used")[100] + "Error:" + Theme::c("main_fg") + Fx::ub,
@@ -1019,7 +1019,7 @@ namespace Menu {
 		return NoChange;
 	}
 
-	int signalSend(const string& key) {
+	static int signalSend(const string& key) {
 		auto s_pid = (Config::getB("show_detailed") and Config::getI("selected_pid") == 0 ? Config::getI("detailed_pid") : Config::getI("selected_pid"));
 		if (s_pid == 0) return Closed;
 		if (redraw) {
@@ -1059,7 +1059,7 @@ namespace Menu {
 		return NoChange;
 	}
 
-	int signalReturn(const string& key) {
+	static int signalReturn(const string& key) {
 		if (redraw) {
 			vector<string> cont_vec;
 			cont_vec.push_back(Fx::b + Theme::g("used")[100] + "Failure:" + Theme::c("main_fg") + Fx::ub);
@@ -1091,7 +1091,7 @@ namespace Menu {
 		return NoChange;
 	}
 
-	int mainMenu(const string& key) {
+	static int mainMenu(const string& key) {
 		enum MenuItems { Options, Help, Quit };
 		static int y{};
 		static int selected{};
@@ -1170,8 +1170,8 @@ namespace Menu {
 		return (redraw ? Changed : retval);
 	}
 
-	int optionsMenu(const string& key) {
-		enum Predispositions { isBool, isInt, isString, is2D, isBrowseable, isEditable};
+static int optionsMenu(const string& key) {
+ 		enum Predispositions { isBool, isInt, isString, is2D, isBrowsable, isEditable};
 		static int y{};
 		static int x{};
 		static int height{};
@@ -1383,7 +1383,7 @@ namespace Menu {
 					recollect = true;
 				}
 			}
-			else if (selPred.test(isBrowseable)) {
+			else if (selPred.test(isBrowsable)) {
 				auto& optList = optionsList.at(option).get();
 				int i = v_index(optList, Config::getS(option));
 
@@ -1438,9 +1438,9 @@ namespace Menu {
 				if (not selPred.test(isString))
 					selPred.set(is2D);
 				else if (optionsList.contains(selOption)) {
-					selPred.set(isBrowseable);
+					selPred.set(isBrowsable);
 				}
-				if (not selPred.test(isBrowseable) and (selPred.test(isString) or selPred.test(isInt)))
+				if (not selPred.test(isBrowsable) and (selPred.test(isString) or selPred.test(isInt)))
 					selPred.set(isEditable);
 			}
 
@@ -1471,18 +1471,18 @@ namespace Menu {
 			auto cy = y+9;
 			for (int c = 0, i = max(0, item_height * page); c++ < item_height and i < (int)categories[selected_cat].size(); i++) {
 				const auto& option = categories[selected_cat][i][0];
-				const auto& value = (option == "color_theme" ? (string) fs::path(Config::getS("color_theme")).stem() : Config::getAsString(option));
+				const auto& value = (option == "color_theme" ? fs::path(Config::getS("color_theme")).stem().string() : Config::getAsString(option));
 
 				out += Mv::to(cy++, x + 1) + (c-1 == selected ? Theme::c("selected_bg") + Theme::c("selected_fg") : Theme::c("title"))
 					+ Fx::b + cjust(capitalize(s_replace(option, "_", " "))
-						+ (c-1 == selected and selPred.test(isBrowseable)
+						+ (c-1 == selected and selPred.test(isBrowsable)
 							? ' ' + to_string(v_index(optionsList.at(option).get(), (option == "color_theme" ? Config::getS("color_theme") : value)) + 1) + '/' + to_string(optionsList.at(option).get().size())
 							: ""), 29);
 				out	+= Mv::to(cy++, x + 1) + (c-1 == selected ? "" : Theme::c("main_fg")) + Fx::ub + "  "
 					+ (c-1 == selected and editing ? cjust(editor(24), 34, true) : cjust(value, 25, true)) + "  ";
 
 				if (c-1 == selected) {
-					if (not editing and (selPred.test(is2D) or selPred.test(isBrowseable))) {
+					if (not editing and (selPred.test(is2D) or selPred.test(isBrowsable))) {
 						out += Fx::b + Mv::to(cy-1, x+2) + Symbols::left + Mv::to(cy-1, x+28) + Symbols::right;
 						mouse_mappings["left"] = {cy-2, x, 2, 5};
 						mouse_mappings["right"] = {cy-2, x+25, 2, 5};
@@ -1532,7 +1532,7 @@ namespace Menu {
 		return (redraw ? Changed : retval);
 	}
 
-	int helpMenu(const string& key) {
+	static int helpMenu(const string& key) {
 		static int y{};
 		static int x{};
 		static int height{};
