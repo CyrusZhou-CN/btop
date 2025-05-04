@@ -115,7 +115,7 @@ if(BTOP_LTO)
   endif()
 endif()
 
-target_compile_options(btop PRIVATE -Wall -Wextra -Wpedantic -ftree-vectorize)
+target_compile_options(btop PRIVATE -Wall -Wextra -Wpedantic)
 
 if(BTOP_PEDANTIC)
   target_compile_options(btop PRIVATE
@@ -145,7 +145,7 @@ endif()
 target_compile_definitions(btop PRIVATE
   FMT_HEADER_ONLY
   _FILE_OFFSET_BITS=64
-  $<$<CONFIG:Debug>:_GLIBCXX_ASSERTIONS _LIBCPP_ENABLE_ASSERTIONS=1>
+  $<$<CONFIG:Debug>:_GLIBCXX_ASSERTIONS _LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG>
 )
 
 target_include_directories(btop SYSTEM PRIVATE include)
