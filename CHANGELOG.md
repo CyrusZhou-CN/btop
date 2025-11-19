@@ -1,3 +1,31 @@
+## v1.4.5
+
+References | Description | Author(s)
+--- | --- | ---
+#1254 | Bump bundled fmt to 12.0.0 | @deckstose
+#1242 | Enable vim movement in help menu | @botantony
+#948 | Remove reduntant symbols in tree view | @Denizantip
+#1249 | Use /sys/dev/block/MAJOR:MINOR instead of /sys/block/NAME for disk I/O | @CountBleck
+#1227 | feat: display CPU power draw & fix GPU+load avg overwriting core info | @Tom94 and @YuriiShkrobut
+4f5abbb | Fix locale issues | @aristocratos
+#1165 | Add encode and decode meters on Nvidia GPUs | @sam-kirby
+#1197 | linux: Battery Time-to-full | @RadsammyT
+#1203 | Convert ascii escape codes in mountpoint names before reading statvfs | @deckstose
+#1198 | Fix presets erroring with gpu* usage | @entropylost
+#1191 | Fix --tty/--no-tty flag having no effect | @deckstose
+
+## v1.4.4
+
+References | Description | Author(s)
+--- | --- | ---
+#1185 | Fix auto-detection of CPU temp on Ampere boards | @bexcran
+589c133 | Fixed floating_humanizer() to work correctly when numeric delimiter isn't a dot. | @aristocratos
+#1157 | Add command line option to set an inital filter | @imwints
+#1172 | Make 100ms the minimal refresh rate. Exit gracefully if integer conversion in CLI parser fails. | @imwints
+#1031 | Lock/unlock config to avoid infinite recursion | @Jacajack
+#1156 | Fix incorrect positioning and start symbol of second title introduced in 2538d89 | @xDMPx
+ffcd064 | Fix dangling reference warnings for GCC 13 and later | aristocratos
+
 ## v1.4.3
 
 References | Description | Author(s)

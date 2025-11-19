@@ -10,7 +10,7 @@
 ![NetBSD](https://img.shields.io/badge/-NetBSD-black?logo=netbsd)
 ![OpenBSD](https://img.shields.io/badge/-OpenBSD-black?logo=openbsd)
 ![Usage](https://img.shields.io/badge/Usage-System%20resource%20monitor-yellow)
-![c++20](https://img.shields.io/badge/cpp-c%2B%2B20-green)
+![c++23](https://img.shields.io/badge/cpp-c%2B%2B23-green)
 ![latest_release](https://img.shields.io/github/v/tag/aristocratos/btop?label=release)
 [![Donate](https://img.shields.io/badge/-Donate-yellow?logo=paypal)](https://paypal.me/aristocratos)
 [![Sponsor](https://img.shields.io/badge/-Sponsor-red?logo=github)](https://github.com/sponsors/aristocratos)
@@ -39,6 +39,7 @@
 * [Compilation FreeBSD](#compilation-freebsd)
 * [Compilation NetBSD](#compilation-netbsd)
 * [Compilation OpenBSD](#compilation-openbsd)
+* [Testing](#testing)
 * [GPU compatibility](#gpu-compatibility)
 * [Installing the snap](#installing-the-snap)
 * [Configurability](#configurability)
@@ -186,13 +187,14 @@ C++ version and continuation of [bashtop](https://github.com/aristocratos/bashto
 ## Features
 
 * Easy to use, with a game inspired menu system.
-* Full mouse support, all buttons with a highlighted key is clickable and mouse scroll works in process list and menu boxes.
-* Fast and responsive UI with UP, DOWN keys process selection.
+* Full mouse support: all buttons with a highlighted key are clickable and mouse scrolling works in process list and menu boxes.
+* Fast and responsive UI with UP, DOWN key process selection.
 * Function for showing detailed stats for selected process.
 * Ability to filter processes.
 * Easy switching between sorting options.
 * Tree view of processes.
 * Send any signal to selected process.
+* Pause the process list.
 * UI menu for changing all config file options.
 * Auto scaling graph for network usage.
 * Shows IO activity and speeds for disks.
@@ -203,33 +205,47 @@ C++ version and continuation of [bashtop](https://github.com/aristocratos/bashto
 
 ## Themes
 
-Btop++ uses the same theme files as bpytop and bashtop (some color values missing in bashtop themes) .
+Btop++ uses the same theme files as bpytop and bashtop (some color values missing in bashtop themes).
 
 See [themes](https://github.com/aristocratos/btop/tree/main/themes) folder for available themes.
 
+Btop searches the following directories for system themes:
+
+* `../share/btop/themes` (this path is relative to the btop executable)
+* `/usr/local/share/btop/themes`
+* `/usr/share/btop/themes`
+
+The first directory that exists and isn't empty is used as the system themes directory.
+
+The user themes directory depends on which environment variables are set:
+
+* If `$XDG_CONFIG_HOME` is set, the user themes directory is `$XDG_CONFIG_HOME/btop/themes`
+* Otherwise, if `$HOME` is set, the user themes directory is `$HOME/.config/btop/themes`
+* Otherwise, the user themes directory is `~/.config/btop/themes`
+
 The `make install` command places the default themes in `[$PREFIX or /usr/local]/share/btop/themes`.
-User created themes should be placed in `$XDG_CONFIG_HOME/btop/themes` or `$HOME/.config/btop/themes`.
+User created themes should be placed in the user themes directory.
 
 Let me know if you want to contribute with new themes.
 
 ## Support and funding
 
-You can sponsor this project through github, see [my sponsors page](https://github.com/sponsors/aristocratos) for options.
+You can sponsor this project through GitHub. See [my sponsors page](https://github.com/sponsors/aristocratos) for options.
 
-Or donate through [paypal](https://paypal.me/aristocratos) or [ko-fi](https://ko-fi.com/aristocratos).
+Or donate through [PayPal](https://paypal.me/aristocratos) or [ko-fi](https://ko-fi.com/aristocratos).
 
 Any support is greatly appreciated!
 
 ## Prerequisites
 
-For best experience, a terminal with support for:
+For the best experience run within a terminal with support for:
 
 * 24-bit truecolor ([See list of terminals with truecolor support](https://github.com/termstandard/colors))
 * 256-color terminals are supported through 24-bit to 256-color conversion when setting "truecolor" to False in the options or with "-lc/--low-color" arguments.
-* 16 color TTY mode will be activated if a real tty device is detected. Can be forced with "-t/--tty_on" arguments.
+* 16 color TTY mode will be activated if a real tty device is detected. Can be forced with "-t/--tty" arguments.
 * Wide characters (Are sometimes problematic in web-based terminals)
 
-Also needs a UTF8 locale and a font that covers:
+Also necessary is a UTF8 locale and a font that includes:
 
 * Unicode Block “Braille Patterns” U+2800 - U+28FF (Not needed in TTY mode or with graphs set to type: block or tty.)
 * Unicode Block “Geometric Shapes” U+25A0 - U+25FF
@@ -243,21 +259,21 @@ See [GPU compatibility](#gpu-compatibility) section for more about compiling wit
 
  * **NVIDIA**
 
-If you have an NVIDIA GPU you must use an official NVIDIA driver, both the closed-source and open-source ones have been verified to work.
+   If you have an NVIDIA GPU you must use an official NVIDIA driver, both the closed-source and open-source ones have been verified to work.
 
-In addition to that you must also have the nvidia-ml dynamic library installed, which should be included with the driver package of your distribution.
+   In addition to that you must also have the nvidia-ml dynamic library installed, which should be included with the driver package of your distribution.
 
  * **AMD**
 
-If you have an AMD GPU `rocm_smi_lib` is required, which may or may not be packaged for your distribution.
+   If you have an AMD GPU `rocm_smi_lib` is required, which may or may not be packaged for your distribution.
 
  * **INTEL**
 
-Requires a working C compiler if compiling from source - tested with GCC12 and Clang16.
+   Requires a working C compiler if compiling from source.
 
-Also requires the user to have permission to read from SYSFS.
+   Also requires the user to have permission to read from SYSFS.
 
-Can be set with `make setcap` (preferred) or `make setuid` or by running btop with `sudo` or equivalent.
+   Can be set with `make setcap` (preferred) or `make setuid` or by running btop with `sudo` or equivalent.
 
 ### **Notice (Text rendering issues)**
 
@@ -301,7 +317,7 @@ Can be set with `make setcap` (preferred) or `make setuid` or by running btop wi
 
 ## Installation
 
-**Binaries for Linux are statically compiled with musl and works on kernel 2.6.39 and newer**
+**Binaries for Linux are statically compiled with musl and work on kernel releases 2.6.39 and newer**
 
 1. **Download btop-(VERSION)-(ARCH)-(PLATFORM).tbz from [latest release](https://github.com/aristocratos/btop/releases/latest) and unpack to a new folder**
 
@@ -317,11 +333,11 @@ Can be set with `make setcap` (preferred) or `make setuid` or by running btop wi
    sudo make install
    ```
 
-3. **(Optional/Required for Intel GPU) Set extended capabilities or suid bit to btop**
+3. **(Optional/Required for Intel GPU and CPU wattage) Set extended capabilities or suid bit to btop**
 
    Enables signal sending to any process without starting with `sudo` and can prevent /proc read permissions problems on some systems.
 
-   Is required for Intel GPU support.
+   Is required for Intel GPU support and CPU wattage monitoring.
 
    * **Run:**
 
@@ -363,7 +379,7 @@ Can be set with `make setcap` (preferred) or `make setuid` or by running btop wi
     ```bash
     sudo dnf install btop
 	```
-* **RHEL/AlmaLinux 8+**
+* **RHEL/Rocky/AlmaLinux 8+**
     ```bash
     sudo dnf install epel-release
 	sudo dnf install btop
@@ -387,9 +403,9 @@ Can be set with `make setcap` (preferred) or `make setuid` or by running btop wi
 
 ## Compilation Linux
 
-   Requires at least GCC 11 or Clang 16.
+   Requires at least GCC 14 or Clang 19.
 
-   The makefile also needs GNU coreutils and `sed` (should already be installed on any modern distribution).
+   The Makefile also needs GNU `coreutils` and `sed` (should already be installed on any modern distribution).
 
    ### GPU compatibility
 
@@ -423,10 +439,10 @@ Can be set with `make setcap` (preferred) or `make setuid` or by running btop wi
 ### With Make
 </summary>
 
-1. **Install dependencies (example for Ubuntu 21.04 Hirsute)**
+1. **Install dependencies (example for Ubuntu 24.04 Noble)**
 
    ```bash
-   sudo apt install coreutils sed git build-essential gcc-11 g++-11 lowdown
+   sudo apt install coreutils sed git build-essential lowdown
    ```
 
 2. **Clone repository**
@@ -471,11 +487,11 @@ Can be set with `make setcap` (preferred) or `make setuid` or by running btop wi
 
    Notice! Only use "sudo" when installing to a NON user owned directory.
 
-5. **(Optional/Required for Intel GPU support) Set extended capabilities or suid bit to btop**
+5. **(Optional/Required for Intel GPU support and CPU wattage) Set extended capabilities or suid bit to btop**
 
    No need for `sudo` to enable signal sending to any process and to prevent /proc read permissions problems on some systems.
 
-   Also required for Intel GPU monitoring.
+   Also required for Intel GPU monitoring and CPU wattage monitoring.
 
    Run after make install and use same PREFIX if any was used at install.
 
@@ -588,11 +604,9 @@ Can be set with `make setcap` (preferred) or `make setuid` or by running btop wi
 
 ## Compilation macOS OSX
 
-   Requires at least GCC 12 or Clang 16.
+   Requires at least GCC 14 or Clang 19.
 
-   With GCC, version 12 (or better) is needed for macOS Ventura. If you get linker errors on Ventura you'll need to upgrade your command line tools (Version 14.0) is bugged.
-
-   The makefile also needs GNU coreutils and `sed`.
+   The Makefile also needs GNU coreutils and `sed`.
 
    Install and use Homebrew or MacPorts package managers for easy dependency installation
 
@@ -605,7 +619,7 @@ Can be set with `make setcap` (preferred) or `make setuid` or by running btop wi
 1. **Install dependencies (example for Homebrew)**
 
    ```bash
-   brew install coreutils make gcc@12 lowdown
+   brew install coreutils make gcc@15 lowdown
    ```
 
 2. **Clone repository**
@@ -716,8 +730,6 @@ Can be set with `make setcap` (preferred) or `make setuid` or by running btop wi
    cmake --build build
    ```
 
-   _**Note:** btop uses lots of C++ 20 features, so it's necessary to be specific about the compiler and the standard library. If you get a compile with Apple-Clang or GCC, feel free to add the instructions here._
-
    This will automatically build a release version of btop.
 
    Some useful options to pass to the configure step:
@@ -756,7 +768,7 @@ Can be set with `make setcap` (preferred) or `make setuid` or by running btop wi
 
 ## Compilation FreeBSD
 
-   Requires at least GCC 11 or Clang 16.
+   Requires at least Clang 19 (default) or GCC 14.
 
    Note that GNU make (`gmake`) is required to compile on FreeBSD.
 
@@ -769,7 +781,7 @@ Can be set with `make setcap` (preferred) or `make setuid` or by running btop wi
 1. **Install dependencies**
 
    ```bash
-   sudo pkg install gmake gcc11 coreutils git lowdown
+   sudo pkg install gmake coreutils git lowdown
    ```
 
 2. **Clone repository**
@@ -857,16 +869,8 @@ Can be set with `make setcap` (preferred) or `make setuid` or by running btop wi
 
    Requires Clang / GCC, CMake, Ninja, Lowdown and Git
 
-   _**Note:** LLVM's libc++ shipped with FreeBSD 13 is too old and cannot compile btop._
-
-	FreeBSD 14 and later:
    ```bash
    pkg install cmake ninja lowdown
-   ```
-
-	FreeBSD 13:
-   ```bash
-   pkg install cmake gcc13 ninja lowdown
    ```
 
 2. **Clone the repository**
@@ -877,18 +881,9 @@ Can be set with `make setcap` (preferred) or `make setuid` or by running btop wi
 
 3. **Compile**
 
-	FreeBSD 14 and later:
    ```bash
    # Configure
    cmake -B build -G Ninja
-   # Build
-   cmake --build build
-   ```
-
-	FreeBSD 13:
-   ```bash
-   # Configure
-   CXX=g++13 cmake -B build -G Ninja
    # Build
    cmake --build build
    ```
@@ -934,7 +929,7 @@ Can be set with `make setcap` (preferred) or `make setuid` or by running btop wi
 
 ## Compilation NetBSD
 
-   Requires at least GCC 11.
+   Requires at least GCC 14.
 
    Note that GNU make (`gmake`) is required to compile on NetBSD.
 
@@ -947,7 +942,8 @@ Can be set with `make setcap` (preferred) or `make setuid` or by running btop wi
 1. **Install dependencies**
 
    ```bash
-   pkg_add gmake gcc11 coreutils git
+   /usr/sbin/pkg_add pkgin
+   pkgin install -y coregutils gcc14 git gmake
    ```
 
 2. **Clone repository**
@@ -960,7 +956,7 @@ Can be set with `make setcap` (preferred) or `make setuid` or by running btop wi
 3. **Compile**
 
    ```bash
-   gmake CXXFLAGS="-DNDEBUG"
+   CXX=/usr/pkg/gcc14/bin/g++ gmake CXXFLAGS="-DNDEBUG"
    ```
 
    Options for make:
@@ -1036,7 +1032,8 @@ Can be set with `make setcap` (preferred) or `make setuid` or by running btop wi
    Requires GCC, CMake, Ninja and Git
 
    ```bash
-   pkg_add cmake ninja-build gcc11 coreutils git
+   /usr/sbin/pkg_add pkgin
+   pkgin install cmake ninja-build gcc14 git
    ```
 
 2. **Clone the repository**
@@ -1049,7 +1046,7 @@ Can be set with `make setcap` (preferred) or `make setuid` or by running btop wi
 
    ```bash
    # Configure
-   cmake -DCMAKE_CXX_COMPILER="/usr/pkg/gcc11/bin/g++" -B build -G Ninja
+   CXX="/usr/pkg/gcc14/bin/g++" cmake -B build -G Ninja
    # Build
    cmake --build build
    ```
@@ -1092,8 +1089,6 @@ Can be set with `make setcap` (preferred) or `make setuid` or by running btop wi
 
 ## Compilation OpenBSD
 
-   Requires at least GCC 11.
-
    Note that GNU make (`gmake`) is required to compile on OpenBSD.
 
 <details>
@@ -1105,7 +1100,7 @@ Can be set with `make setcap` (preferred) or `make setuid` or by running btop wi
 1. **Install dependencies**
 
    ```bash
-   pkg_add gmake gcc%11 g++%11 coreutils git lowdown
+   pkg_add coreutils git gmake lowdown
    ```
 
 2. **Clone repository**
@@ -1118,7 +1113,7 @@ Can be set with `make setcap` (preferred) or `make setuid` or by running btop wi
 3. **Compile**
 
    ```bash
-   gmake CXX=eg++
+   gmake
    ```
 
    Options for make:
@@ -1196,7 +1191,7 @@ Can be set with `make setcap` (preferred) or `make setuid` or by running btop wi
    _**Note:** LLVM's libc++ shipped with OpenBSD 7.4 is too old and cannot compile btop._
 
    ```bash
-   pkg_add cmake g++%11 git ninja lowdown
+   pkg_add cmake git ninja lowdown
    ```
 
 2. **Clone the repository**
@@ -1209,7 +1204,7 @@ Can be set with `make setcap` (preferred) or `make setuid` or by running btop wi
 
    ```bash
    # Configure
-   CXX=eg++ cmake -B build -G Ninja
+   cmake -B build -G Ninja
    # Build
    cmake --build build
    ```
@@ -1221,8 +1216,6 @@ Can be set with `make setcap` (preferred) or `make setuid` or by running btop wi
    | Configure flag                  | Description                                                             |
    |---------------------------------|-------------------------------------------------------------------------|
    | `-DBTOP_LTO=<ON\|OFF>`          | Enables link time optimization (ON by default)                          |
-
-
    | `-DCMAKE_INSTALL_PREFIX=<path>` | The installation prefix ('/usr/local' by default)                       |
 
    To force any other compiler, run `CXX=<compiler> cmake -B build -G Ninja`
@@ -1249,6 +1242,12 @@ Can be set with `make setcap` (preferred) or `make setuid` or by running btop wi
    ```
 
 </details>
+
+## Testing
+
+Testing requires [CMake](cmake.org). Tests are build by default and can be run with `ctest --test-dir <build>`.
+
+If you want to disable building tests, pass `-DBUILD_TESTING=OFF` to the configure step.
 
 ## Installing the snap
 [![btop](https://snapcraft.io/btop/badge.svg)](https://snapcraft.io/btop)
@@ -1340,8 +1339,8 @@ shown_boxes = "proc cpu mem net"
 #* Update time in milliseconds, recommended 2000 ms or above for better sample times for graphs.
 update_ms = 1500
 
-#* Processes sorting, "pid" "program" "arguments" "threads" "user" "memory" "cpu lazy" "cpu responsive",
-#* "cpu lazy" sorts top process over time (easier to follow), "cpu responsive" updates top process directly.
+#* Processes sorting, "pid" "program" "arguments" "threads" "user" "memory" "cpu lazy" "cpu direct",
+#* "cpu lazy" sorts top process over time (easier to follow), "cpu direct" updates top process directly.
 proc_sorting = "cpu lazy"
 
 #* Reverse sorting order, True or False.
@@ -1361,6 +1360,9 @@ proc_per_core = True
 
 #* Show process memory as bytes instead of percent.
 proc_mem_bytes = True
+
+#* Choose to preserve last cpu and memory usage of dead processes for when paused.
+keep_dead_proc_usage = False
 
 #* Use /proc/[pid]/smaps for memory information in the process info box (very slow but more accurate)
 proc_info_smaps = False
@@ -1388,6 +1390,9 @@ cpu_bottom = False
 #* Shows the system uptime in the CPU box.
 show_uptime = True
 
+#* Shows the CPU package current power consumption in watts. Requires running `make setcap` or `make setuid` or running with sudo.
+show_cpu_watts = True
+
 #* Show cpu temperature.
 check_temp = True
 
@@ -1411,6 +1416,9 @@ base_10_sizes = False
 
 #* Show CPU frequency.
 show_cpu_freq = True
+
+#* How to calculate CPU frequency, available values: "first", "range", "lowest", "highest" and "average".
+freq_mode = "first"
 
 #* Draw a clock at top of screen, formatting according to strftime, empty string to disable.
 #* Special formatting: /host = hostname | /user = username | /uptime = system uptime

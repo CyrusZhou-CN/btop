@@ -32,19 +32,15 @@ jobs:
       matrix:
         include:
           - compiler: clang
-            version: 18
-          - compiler: clang
             version: 19
           - compiler: clang
             version: 20
-          - compiler: gcc
-            version: 12
-          - compiler: gcc
-            version: 13
+          - compiler: clang
+            version: 21
           - compiler: gcc
             version: 14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install clang ${{ matrix.version }}
         if: ${{ matrix.compiler == 'clang' }}
@@ -61,7 +57,10 @@ jobs:
             export CC=gcc-${{ matrix.version }}
             export CXX=g++-${{ matrix.version }}
           fi
-          cmake -B build -G Ninja
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
 
       - name: Compile
         run: cmake --build build --verbose
+
+      - name: Test
+        run: ctest --test-dir build

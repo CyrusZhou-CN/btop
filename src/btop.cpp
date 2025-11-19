@@ -16,6 +16,8 @@ indent = tab
 tab-size = 4
 */
 
+#include "btop.hpp"
+
 #include <algorithm>
 #include <csignal>
 #include <clocale>
@@ -23,6 +25,8 @@ tab-size = 4
 #include <iterator>
 #include <optional>
 #include <pthread.h>
+#include <span>
+#include <string_view>
 #ifdef __FreeBSD__
 	#include <pthread_np.h>
 #endif
@@ -37,7 +41,6 @@ tab-size = 4
 #include <regex>
 #include <chrono>
 #include <utility>
-#include <variant>
 #include <semaphore>
 
 #ifdef __APPLE__
@@ -81,7 +84,7 @@ namespace Global {
 		{"#801414", "██████╔╝   ██║   ╚██████╔╝██║        ╚═╝    ╚═╝"},
 		{"#000000", "╚═════╝    ╚═╝    ╚═════╝ ╚═╝"},
 	};
-	const string Version = "1.4.3";
+	const string Version = "1.4.5";
 
 	int coreCount;
 	string overlay;
@@ -254,6 +257,16 @@ static void _resume() {
 
 static void _exit_handler() {
 	clean_quit(-1);
+}
+
+static void _crash_handler(const int sig) {
+	// Restore terminal before crashing
+	if (Term::initialized) {
+		Term::restore();
+	}
+	// Re-raise the signal to get default behavior (core dump)
+	std::signal(sig, SIG_DFL);
+	std::raise(sig);
 }
 
 static void _signal_handler(const int sig) {
@@ -703,10 +716,11 @@ namespace Runner {
 			}
 
 			//? If overlay isn't empty, print output without color and then print overlay on top
-			cout << Term::sync_start << (conf.overlay.empty()
+			const bool term_sync = Config::getB("terminal_sync");
+			cout << (term_sync ? Term::sync_start : "") << (conf.overlay.empty()
 					? output
 					: (output.empty() ? "" : Fx::ub + Theme::c("inactive_fg") + Fx::uncolor(output)) + conf.overlay)
-				<< Term::sync_end << flush;
+				<< (term_sync ? Term::sync_end : "") << flush;
 		}
 		//* ----------------------------------------------- THREAD LOOP -----------------------------------------------
 		return {};
@@ -721,6 +735,14 @@ namespace Runner {
 			active = false;
 			// exit(1);
 			pthread_cancel(Runner::runner_id);
+
+			// Wait for the thread to actually terminate before creating a new one
+			void* thread_result;
+			int join_result = pthread_join(Runner::runner_id, &thread_result);
+			if (join_result != 0) {
+				Logger::warning("Failed to join cancelled thread: " + string(strerror(join_result)));
+			}
+
 			if (pthread_create(&Runner::runner_id, nullptr, &Runner::_runner, nullptr) != 0) {
 				Global::exit_error_msg = "Failed to re-create _runner thread!";
 				clean_quit(1);
@@ -729,10 +751,12 @@ namespace Runner {
 		if (stopping or Global::resized) return;
 
 		if (box == "overlay") {
-			cout << Term::sync_start << Global::overlay << Term::sync_end << flush;
+			const bool term_sync = Config::getB("terminal_sync");
+			cout << (term_sync ? Term::sync_start : "") << Global::overlay << (term_sync ? Term::sync_end : "") << flush;
 		}
 		else if (box == "clock") {
-			cout << Term::sync_start << Global::clock << Term::sync_end << flush;
+			const bool term_sync = Config::getB("terminal_sync");
+			cout << (term_sync ? Term::sync_start : "") << Global::clock << (term_sync ? Term::sync_end : "") << flush;
 		}
 		else {
 			Config::unlock();
@@ -785,9 +809,25 @@ namespace Runner {
 
 }
 
+static auto configure_tty_mode(std::optional<bool> force_tty) {
+	if (force_tty.has_value()) {
+		Config::set("tty_mode", force_tty.value());
+		Logger::debug("TTY mode set via command line");
+  	}
+
+#if !defined(__APPLE__) && !defined(__OpenBSD__) && !defined(__NetBSD__)
+	else if (Term::current_tty.starts_with("/dev/tty")) {
+		Config::set("tty_mode", true);
+		Logger::debug("Auto detect real TTY");
+  	}
+#endif
+
+	Logger::debug(fmt::format("TTY mode enabled: {}", Config::getB("tty_mode")));
+}
+
 
 //* --------------------------------------------- Main starts here! ---------------------------------------------------
-int main(const int argc, const char** argv) {
+[[nodiscard]] auto btop_main(const std::span<const std::string_view> args) -> int {
 
 	//? ------------------------------------------------ INIT ---------------------------------------------------------
 
@@ -806,23 +846,17 @@ int main(const int argc, const char** argv) {
 
 	Cli::Cli cli;
 	{
-		// Wrap the command line arguments in a vector, ignoring the first element, which is the basename (executable name)
-		const std::vector<std::string_view> args {
-			std::next(argv, std::ptrdiff_t { 1 }),
-			std::next(argv, static_cast<std::ptrdiff_t>(argc))
-		};
-
 		// Get the cli options or return with an exit code
-		auto cli_or_ret = Cli::parse(args);
-		if (std::holds_alternative<Cli::Cli>(cli_or_ret)) {
-			cli = std::get<Cli::Cli>(cli_or_ret);
+		auto result = Cli::parse(args);
+		if (result.has_value()) {
+			cli = result.value();
 		} else {
-			auto ret = std::get<std::int32_t>(cli_or_ret);
-			if (ret != 0) {
+			auto error = result.error();
+			if (error != 0) {
 				Cli::usage();
 				Cli::help_hint();
 			}
-			return ret;
+			return error;
 		}
 	}
 
@@ -880,9 +914,9 @@ int main(const int argc, const char** argv) {
 	init_config(cli.low_color, cli.filter);
 
 	//? Try to find and set a UTF-8 locale
-	if (std::setlocale(LC_ALL, "") != nullptr and not s_contains((string)std::setlocale(LC_ALL, ""), ";")
+	if (std::setlocale(LC_ALL, "") != nullptr and not std::string_view { std::setlocale(LC_ALL, "") }.contains(";")
 	and str_to_upper(s_replace((string)std::setlocale(LC_ALL, ""), "-", "")).ends_with("UTF8")) {
-		Logger::debug("Using locale " + (string)std::setlocale(LC_ALL, ""));
+		Logger::debug("Using locale " + std::locale().name());
 	}
 	else {
 		string found;
@@ -942,8 +976,9 @@ int main(const int argc, const char** argv) {
 			clean_quit(1);
 		}
 	#endif
-		else if (not set_failure)
+		else if (not set_failure) {
 			Logger::debug("Setting LC_ALL=" + found);
+		}
 	}
 
 	//? Initialize terminal and set options
@@ -952,17 +987,11 @@ int main(const int argc, const char** argv) {
 		clean_quit(1);
 	}
 
-	if (Term::current_tty != "unknown") Logger::info("Running on " + Term::current_tty);
-	if ((!cli.force_tty.has_value() || !cli.force_tty.value()) && Config::getB("force_tty")) {
-		Config::set("tty_mode", true);
-		Logger::info("Forcing tty mode: setting 16 color mode and using tty friendly graph symbols");
+	if (Term::current_tty != "unknown") {
+		Logger::info("Running on " + Term::current_tty);
 	}
-#if not defined __APPLE__ && not defined __OpenBSD__ && not defined __NetBSD__
-	else if ((!cli.force_tty.has_value() || !cli.force_tty.value()) && Term::current_tty.starts_with("/dev/tty")) {
-		Config::set("tty_mode", true);
-		Logger::info("Real tty detected: setting 16 color mode and using tty friendly graph symbols");
-	}
-#endif
+
+	configure_tty_mode(cli.force_tty);
 
 	//? Check for valid terminal dimensions
 	{
@@ -1003,6 +1032,12 @@ int main(const int argc, const char** argv) {
 	std::signal(SIGWINCH, _signal_handler);
 	std::signal(SIGUSR1, _signal_handler);
 	std::signal(SIGUSR2, _signal_handler);
+	// Add crash handlers to restore terminal on crash
+	std::signal(SIGSEGV, _crash_handler);
+	std::signal(SIGABRT, _crash_handler);
+	std::signal(SIGTRAP, _crash_handler);
+	std::signal(SIGBUS, _crash_handler);
+	std::signal(SIGILL, _crash_handler);
 
 	sigset_t mask;
 	sigemptyset(&mask);
@@ -1038,7 +1073,8 @@ int main(const int argc, const char** argv) {
 	Draw::calcSizes();
 
 	//? Print out box outlines
-	cout << Term::sync_start << Cpu::box << Mem::box << Net::box << Proc::box << Term::sync_end << flush;
+	const bool term_sync = Config::getB("terminal_sync");
+	cout << (term_sync ? Term::sync_start : "") << Cpu::box << Mem::box << Net::box << Proc::box << (term_sync ? Term::sync_end : "") << flush;
 
 
 	//? ------------------------------------------------ MAIN LOOP ----------------------------------------------------
@@ -1129,5 +1165,5 @@ int main(const int argc, const char** argv) {
 		Global::exit_error_msg = "Exception in main loop -> " + string{e.what()};
 		clean_quit(1);
 	}
-
+	return 0;
 }

@@ -167,7 +167,7 @@ OBJEXT		:= o
 override GOODFLAGS := $(foreach flag,$(TESTFLAGS),$(strip $(shell echo "int main() {}" | $(CXX) -o /dev/null $(flag) -x c++ - >/dev/null 2>&1 && echo $(flag) || true)))
 
 #? Flags, Libraries and Includes
-override REQFLAGS   := -std=c++20
+override REQFLAGS   := -std=c++23
 WARNFLAGS			:= -Wall -Wextra -pedantic
 OPTFLAGS			:= -O2 $(LTO)
 LDCXXFLAGS			:= -pthread -DFMT_HEADER_ONLY -D_GLIBCXX_ASSERTIONS -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG -D_FILE_OFFSET_BITS=64 $(GOODFLAGS) $(ADDFLAGS)
@@ -333,7 +333,7 @@ setuid:
 setcap:
 	@printf "\033[1;97mFile: $(DESTDIR)$(PREFIX)/bin/btop\n"
 	@printf "\033[1;92mSetting capabilities...\033[0m\n"
-	@setcap cap_perfmon=+ep $(DESTDIR)$(PREFIX)/bin/btop
+	@setcap "cap_perfmon=+ep cap_dac_read_search=+ep" $(DESTDIR)$(PREFIX)/bin/btop
 
 # With 'rm -v' user will see what files (if any) got removed
 uninstall:
